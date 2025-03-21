@@ -10,8 +10,10 @@ import com.sky.vo.DishVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,12 +30,16 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class DishController {
   @Autowired
+  private RedisTemplate redisTemplate;
+  @Autowired
   private DishService dishService;
   @PostMapping
   @ApiOperation("新增菜品")
   public Result save(@RequestBody DishDTO dishDTO){
     log.info("新增菜品：{}", dishDTO);
     dishService.saveWithFlavor(dishDTO);
+    String key = "dish_" + dishDTO.getCategoryId();
+    redisTemplate.delete(key);
     return Result.success();
   }
   @GetMapping("/page")
@@ -49,6 +55,8 @@ public class DishController {
   public Result delete(@RequestParam List<Long> ids){
     log.info("菜品批量删除：{}", ids);
     dishService.deleteBatch(ids);
+    Set keys = redisTemplate.keys("dish*");
+    redisTemplate.delete(keys);
     return Result.success();
   }
 
@@ -65,14 +73,29 @@ public class DishController {
   public Result update(@RequestBody DishDTO dishDTO){
     log.info("修改菜品：{}", dishDTO);
     dishService.updateWithFlavor(dishDTO);
+    cleanCache("dish*");
     return Result.success();
   }
+
+
 
   @GetMapping("/list")
   @ApiOperation("根据分类id查询菜品")
   public Result<List<Dish>> list(Long categoryId){
     List<Dish> list = dishService.list(categoryId);
     return Result.success(list);
+  }
+
+  private void cleanCache(String pattern){
+    Set keys = redisTemplate.keys(pattern);
+    redisTemplate.delete(keys);
+  }
+  @PostMapping("/status/{status}")
+  @ApiOperation("菜品起售停售")
+  public Result<String> startOrStop(@PathVariable Integer status, Long id){
+    dishService.startOrStop(status,id);
+    cleanCache("dish*");
+    return Result.success();
   }
 
 }

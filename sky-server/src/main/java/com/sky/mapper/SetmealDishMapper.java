@@ -8,7 +8,6 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface SetmealDishMapper {
-  List<Long> getSetmealIdByDishIds(List<Long> dishIds);
 
   void insertBatch(List<SetmealDish> setmealDishes);
 
@@ -17,4 +16,8 @@ public interface SetmealDishMapper {
 
   @Select("select * from setmeal_dish where setmeal_id = #{setmealId}")
   List<SetmealDish> getBySetmealId(Long setmealId);
+
+  List<Long> getSetmealIdsByDishIds(List<Long> dishIds);
+
+  List<Long> getSetmealIdByDishIds(List<Long> ids);
 }
